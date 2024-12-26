@@ -1,0 +1,55 @@
+version: '2.3'
+
+services:
+  xvfbsrv:
+    image: gym_mupen64plus
+    entrypoint: [
+      'Xvfb', ':0',
+      '-screen', '0',
+      '640x480x24',
+      '-fbdir', '/dev/shm',
+      '-ac',
+      '-listen', 'tcp'
+    ]
+
+  vncsrv:
+    image: gym_mupen64plus
+    environment:
+      - DISPLAY=xvfbsrv:0
+    entrypoint: [ 'x11vnc', '-forever', '-viewonly', '-shared', '-nopw', '-noshm' ]
+    depends_on: [ xvfbsrv ]
+
+  emulator:
+    image: gym_mupen64plus
+    environment:
+      - DISPLAY=xvfbsrv:0
+    volumes:
+      - type: bind
+        source: "${LOCAL_ROM_PATH}"
+        target: /src/gym-mupen64plus/gym_mupen64plus/ROMs
+    command: [
+      'mupen64plus',
+      '--nospeedlimit',
+      '--nosaveoptions',
+      '--resolution', '640x480',
+      '--gfx', 'mupen64plus-video-glide64.so',
+      '--audio', 'dummy',
+      '--input', '/usr/local/lib/mupen64plus/mupen64plus-input-bot.so',
+      '--set', 'Input-Bot-Control0[plugged]=1',
+      '--set', 'Input-Bot-Control0[host]=agent',
+      '--set', 'Input-Bot-Control0[port]=8082',
+      '/src/gym-mupen64plus/gym_mupen64plus/ROMs/marioKart.n64'
+    ]
+    depends_on: [ xvfbsrv, agent ]
+
+  agent:
+    image: gym_mupen64plus
+    build:
+      context: .
+      dockerfile: Dockerfile
+    environment:
+      - DISPLAY=xvfbsrv:0
+      - EXTERNAL_EMULATOR=True
+    command: [ 'python', '-u', 'gym-mupen64plus/EnvSender.py' ]
+    depends_on: [ xvfbsrv ]
+

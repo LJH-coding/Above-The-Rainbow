@@ -1,0 +1,10 @@
+version: '2.3'
+
+services:
+  xvfbsrv:
+    ports:
+      - "6002:6000"
+
+  vncsrv:
+    ports:
+      - "5902:5900"
